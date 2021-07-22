@@ -1,0 +1,13 @@
+name: Exploracao_dados_saude
+title: Exploracao_dados_saude
+username:
+account: silvaneojunior
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4410025
+bundleId: 4843709
+url: https://silvaneojunior.shinyapps.io/Exploracao_dados_saude/
+when: 1626914960.29108
+lastSyncTime: 1626914960.29108
+asMultiple: FALSE
+asStatic: FALSE

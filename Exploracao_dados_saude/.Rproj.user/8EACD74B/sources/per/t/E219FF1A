@@ -1,0 +1,26 @@
+{
+    "id": "E219FF1A",
+    "path": "C:/Jupyter/LabMa/relatorios/relatorio_piloto - Cloud/relatorios/server.R",
+    "project_path": null,
+    "type": "r_source",
+    "hash": "3627236113",
+    "contents": "",
+    "dirty": false,
+    "created": 1626911041653.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "280,0",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1626816969,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1626816969,
+    "read_only": false,
+    "read_only_alternatives": []
+}
