@@ -78,7 +78,7 @@ ui <- fluidPage(
                                 fluidRow(radioButtons('denom_gastro','Denominador para taxa',list('População'=F,'Internações'=T))),
                                 align='left',
                                 style='padding-top: 10%;'),
-                         column(10,
+                         column(8,
                                 tabsetPanel(
                                     tabPanel('População residente',
                                              plotlyOutput("gastro_pop",height='600px', width = '1000px'),align="center"),
@@ -100,7 +100,7 @@ ui <- fluidPage(
                                 fluidRow(radioButtons('denom_vari','Denominador para taxa',list('População'=F,'Internações'=T))),
                                 align='left',
                                 style='padding-top: 10%;'),
-                         column(10,
+                         column(8,
                                 tabsetPanel(
                                     tabPanel('População residente',
                                              plotlyOutput("vari_pop",height='600px', width = '1000px'),align="center"),
@@ -113,7 +113,7 @@ ui <- fluidPage(
                                 )
                          )
                      ))),
-            width=10
+            width=12
         )
 )
 
