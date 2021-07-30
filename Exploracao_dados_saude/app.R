@@ -31,8 +31,8 @@ turn_dynamic=function(pl){return(ggplotly(pl) %>%
                                      ))}
 
 get_data=function(data_name){
-    pre_data_1=read.csv2(paste0('data/',data_name,' 1984-2007.csv'))[1:12,-12]
-    pre_data_2=read.csv2(paste0('data/',data_name,' 2007-2021.csv'))[1:12,c(-1,-16,-17)]
+    pre_data_1=read.csv2(paste0('data/Ano/',data_name,' 1984-2007.csv'))[1:12,-12]
+    pre_data_2=read.csv2(paste0('data/Ano/',data_name,' 2007-2021.csv'))[1:12,c(-1,-16,-17)]
     
     data_inter=cbind(pre_data_1,pre_data_2)
     names(data_inter)=c('Idade',paste0('X',c(1998:2006)),'X2007_old','X2007_new',paste0('X',c(2008:2020)))
@@ -563,7 +563,7 @@ server <- function(input, output) {
         }else{
             dados_exp=ref_pop()
         }
-        dados_obt=vari_obt()
+        dados_obt=vari_inter()
         
         dados=dados_exp
         dados$value=ifelse(dados_exp$value==0,NA,dados_obt$value/dados_exp$value)

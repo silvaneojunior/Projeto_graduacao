@@ -1,0 +1,13 @@
+name: Exploracao_dados_saude_mensal
+title: Exploracao_dados_saude_mensal
+username:
+account: silvaneojunior
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4440709
+bundleId: 4872880
+url: https://silvaneojunior.shinyapps.io/Exploracao_dados_saude_mensal/
+when: 1627666155.45457
+lastSyncTime: 1627666155.45457
+asMultiple: FALSE
+asStatic: FALSE
