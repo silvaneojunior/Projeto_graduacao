@@ -42,8 +42,8 @@ get_data=function(data_name){
     return(data_inter)
 }
 
-labels_idade=c("0 a 4 anos",
-               "5 a 9 anos",
+labels_idade=c("00 a 04 anos",
+               "05 a 09 anos",
                "10 a 14 anos",
                "15 a 19 anos",
                "20 a 29 anos",
@@ -59,7 +59,7 @@ varicela_obt=get_data('varicela obitos')
 gast_inter=get_data('gastroenterite internacoes')
 gast_obt=get_data('gastroenterite obitos')
 
-pop=cbind(read.csv2(paste0('data/populacao 1998-1999.csv'))[1:11,],read.csv2(paste0('data/populacao 2000-2020.csv'))[1:11,c(-1)])
+pop=cbind(read.csv2(paste0('data/ano/populacao 1998-1999.csv'))[1:11,],read.csv2(paste0('data/ano/populacao 2000-2020.csv'))[1:11,c(-1)])
 names(pop)=c('Idade',paste0('X',c(1998:2020)))
 pop$Idade=c(2,7,12,17,24.5,34.5,44.5,54.5,64.5,74.5,80)
 
@@ -108,7 +108,7 @@ ui <- fluidPage(
                                              plotlyOutput("vari_int",height='600px', width = '1000px'),align="center"),
                                     tabPanel('Óbitos',
                                              plotlyOutput("vari_obt",height='600px', width = '1000px'),align="center"),
-                                    tabPanel('Taxa de óbitos',
+                                    tabPanel('Taxa de internações',
                                              plotlyOutput("vari_tx",height='600px', width = '1000px'),align="center")
                                 )
                          )
@@ -587,11 +587,11 @@ server <- function(input, output) {
             
         }
         if(input$log_scale_vari){
-            scale_y=scale_y_log10('Taxa de mortalidade',
+            scale_y=scale_y_log10('Taxa de internações',
                                   breaks=10**c(-8:0),
                                   limits=10**c(-8,0),expand=c(0,0))
         }else{
-            scale_y=scale_y_continuous('Taxa de mortalidade',expand=c(0,0))
+            scale_y=scale_y_continuous('Taxa de internações',expand=c(0,0))
         }
         turn_dynamic(
             ggplot(dados)+
@@ -600,7 +600,7 @@ server <- function(input, output) {
                 scale_y+
                 scale_color+
                 theme_bw()+
-                labs(title=ifelse(input$denom_gastro,'Taxa de óbitos por varicela (a cada internação)','Taxa de óbitos por varicela (a cada residente)'))+
+                labs(title=ifelse(input$denom_gastro,'Taxa de internações por varicela (a cada residente)','Taxa de internações por varicela (a cada residente)'))+
                 theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
         )
     })

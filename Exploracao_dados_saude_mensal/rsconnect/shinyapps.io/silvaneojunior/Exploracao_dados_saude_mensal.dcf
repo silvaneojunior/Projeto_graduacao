@@ -4,10 +4,10 @@ username:
 account: silvaneojunior
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 4440709
-bundleId: 4872880
+appId: 4537667
+bundleId: 4964895
 url: https://silvaneojunior.shinyapps.io/Exploracao_dados_saude_mensal/
-when: 1627666155.45457
-lastSyncTime: 1627666155.45457
+when: 1629931508.8855
+lastSyncTime: 1629931508.8855
 asMultiple: FALSE
 asStatic: FALSE
