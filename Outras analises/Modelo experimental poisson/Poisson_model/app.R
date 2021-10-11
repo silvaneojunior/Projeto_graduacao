@@ -86,23 +86,23 @@ server <- function(input, output) {
         values$samples=matrix(1/13,n+1,13)
         beta_0=input$beta
         values$prorp=c(1)
-        values$alpha=rgamma(n+1,sum(values$y[6:13]),1)
+        values$alpha=rgamma(n+1,sum(values$y[7:13]),1)
         for(i in 1:n+1){
             if(i%%100==0){
                 print(i)
             }
             placeholder=c()
             prorp=rgamma(1,sum(values$samples[i-1,1:12]),sum(values$samples[i-1,2:13]))
-            alpha=values$alpha[i]/sum(values$samples[i-1,6:13])
+            alpha=values$alpha[i]/sum(values$samples[i-1,7:13])
             values$prorp=c(values$prorp,prorp)
             values$alpha[i]=alpha
             last_guy=rgamma(1,shape=values$y[1],rate=1)
             placeholder=c(placeholder,last_guy)
-            for(j in c(2:5)){
+            for(j in c(2:6)){
                 last_guy=rgamma(1,shape=beta_0*last_guy+values$y[j],rate=prorp*beta_0+1)
                 placeholder=c(placeholder,last_guy)
             }
-            for(j in c(6:13)){
+            for(j in c(7:13)){
                 last_guy=rgamma(1,shape=beta_0*last_guy+values$y[j],rate=prorp*beta_0+alpha)
                 placeholder=c(placeholder,last_guy)
             }
@@ -115,7 +115,7 @@ server <- function(input, output) {
         samples=values$samples[c(input$b:floor(n/input$n))*input$n,]
         alpha=values$alpha[c(input$b:floor(n/input$n))*input$n]
         
-        samples[,6:13]=samples[,6:13]*alpha
+        samples[,7:13]=samples[,7:13]*alpha
         
         years=2007+c(1:length(y))
         
