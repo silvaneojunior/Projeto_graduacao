@@ -109,7 +109,7 @@ ui <- fluidPage(
                                     tabPanel('Óbitos',
                                              plotlyOutput("vari_obt",height='600px', width = '1000px'),align="center"),
                                     tabPanel('Taxa de internações',
-                                             plotlyOutput("vari_tx",height='600px', width = '1000px'),align="center")
+                                             plotOutput("vari_tx",height='600px', width = '1000px'),align="center")
                                 )
                          )
                      ))),
@@ -318,14 +318,16 @@ server <- function(input, output) {
         max_value=maximos[[3]]
         
         if(input$eixo_gast_idade){
-            linha=geom_line(aes(x=Idade,y=value,color=name))
+            linha=geom_line(aes(x=Idade,y=value,color=name,shape=name))
+            ponto=geom_point(aes(x=Idade,y=value,color=name,shape=name))
             scale_x=scale_x_continuous('Faixa etária',breaks=unique(dados$Idade),labels = labels_idade,expand=c(0,0))
             scale_color=scale_color_hue('Ano')
         }else{
             dados$Idade=as.factor(dados$Idade)
             levels(dados$Idade)=labels_idade
             dados$name=as.numeric(as.character(dados$name))
-            linha=geom_line(aes(x=name,y=value,color=Idade))
+            linha=geom_line(aes(x=name,y=value,color=Idade,shape=Idade))
+            ponto=geom_point(aes(x=Idade,y=value,color=Idade,shape=Idade))
             scale_x=scale_x_continuous('Ano',breaks=unique(dados$name),expand=c(0,0))
             scale_color=scale_color_hue('Faixa etária',labels = labels_idade)
                 
@@ -341,6 +343,7 @@ server <- function(input, output) {
         turn_dynamic(
             ggplot(dados)+
                 linha+
+                ponto+
                 scale_x+
                 scale_y+
                 scale_color+
@@ -487,6 +490,7 @@ server <- function(input, output) {
         
         if(input$eixo_vari_idade){
             linha=geom_line(aes(x=Idade,y=value,color=name))
+            ponto=geom_point(aes(x=Idade,y=value,color=name,shape=name))
             scale_x=scale_x_continuous('Faixa etária',breaks=unique(dados$Idade),labels = labels_idade,expand=c(0,0))
             scale_color=scale_color_hue('Ano')
         }else{
@@ -494,6 +498,7 @@ server <- function(input, output) {
             levels(dados$Idade)=labels_idade
             dados$name=as.numeric(as.character(dados$name))
             linha=geom_line(aes(x=name,y=value,color=Idade))
+            ponto=geom_point(aes(x=name,y=value,color=Idade,shape=Idade))
             scale_x=scale_x_continuous('Ano',breaks=unique(dados$name),expand=c(0,0))
             scale_color=scale_color_hue('Faixa etária',labels = labels_idade)
             
@@ -509,6 +514,7 @@ server <- function(input, output) {
         turn_dynamic(
             ggplot(dados)+
                 linha+
+                ponto+
                 scale_x+
                 scale_y+
                 scale_color+
@@ -557,7 +563,7 @@ server <- function(input, output) {
                 theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
         )
     })
-    output$vari_tx <- renderPlotly({
+    output$vari_tx <- renderPlot({
         if(input$denom_vari){
             dados_exp=vari_inter()
         }else{
@@ -574,15 +580,17 @@ server <- function(input, output) {
         max_value=maximos[[3]]
         
         if(input$eixo_vari_idade){
-            linha=geom_line(aes(x=Idade,y=value,color=name))
+            linha=geom_line(aes(x=Idade,y=100000*value/12,color=name,shape=name))
+            ponto=geom_point(aes(x=Idade,y=100000*value/12,color=name,shape=name))
             scale_x=scale_x_continuous('Faixa etária',breaks=unique(dados$Idade),labels = labels_idade,expand=c(0,0))
             scale_color=scale_color_hue('Ano')
         }else{
             dados$Idade=as.factor(dados$Idade)
             levels(dados$Idade)=labels_idade
             dados$name=as.numeric(as.character(dados$name))
-            linha=geom_line(aes(x=name,y=value,color=Idade))
-            scale_x=scale_x_continuous('Ano',breaks=unique(dados$name),expand=c(0,0))
+            linha=geom_line(aes(x=name,y=100000*value/12))
+            ponto=geom_point(aes(x=name,y=100000*value/12))
+            scale_x=scale_x_continuous('Ano',breaks=c(0:10)*2+2000,expand=c(0,0))
             scale_color=scale_color_hue('Faixa etária',labels = labels_idade)
             
         }
@@ -591,18 +599,20 @@ server <- function(input, output) {
                                   breaks=10**c(-8:0),
                                   limits=10**c(-8,0),expand=c(0,0))
         }else{
-            scale_y=scale_y_continuous('Taxa de internações',expand=c(0,0))
+            scale_y=scale_y_continuous('Internações a cada 100.000 residente',expand=c(0,0),limits=c(0,8))
         }
-        turn_dynamic(
             ggplot(dados)+
                 linha+
+                ponto+
                 scale_x+
                 scale_y+
                 scale_color+
                 theme_bw()+
-                labs(title=ifelse(input$denom_gastro,'Taxa de internações por varicela (a cada residente)','Taxa de internações por varicela (a cada residente)'))+
+                scale_shape_manual(values=c(0:10))+
+                facet_wrap(~Idade)+
+                geom_vline(xintercept=2008,linetype='dashed')+
+                labs(title=ifelse(input$denom_gastro,'Média mensal de internações por varicela','Média mensal de internações por varicela'))+
                 theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
-        )
     })
 }
 
