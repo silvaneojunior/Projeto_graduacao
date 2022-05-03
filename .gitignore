@@ -2,7 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
-*/.Rproj.user/
-*/rsconnect/
-*/
-*/.*
+**/.Rproj.user/
+**/rsconnect/
+.*/
