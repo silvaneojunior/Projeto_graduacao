@@ -3,20 +3,30 @@ library(tidyr) # Opcional: ajuda na clareza do código da barra de loading.
 library(hms)   # Opcional: serve para formatar o ETA na barra de loading.
 library(beepr) # Opcional: serve para chamar a função beep.
 library(feather)
+library(plotly)
+library(kableExtra)
+
+library(readxl)
+library(janitor)
+library(ggplot2)
+library(dplyr)
+library(Matrix)
+library(MASS)
+library(rootSolve)
+
+source(getwd() %>% paste0('/R/main.R'))
 
 # Ajustando os dados
 
 dados=read.csv('data/varicela internacoes.csv')[,c(1,7:162)]
 dados[1:2,1]='00 a 04 anos'
 dados[5:8,1]='15 a 49 anos'
-dados[9:11,1]='50 a 79 anos'
-#dados[9:12,1]='50 anos e mais'
+dados[9:12,1]='50 anos e mais'
 dados=aggregate(.~FaixaEtaria,dados,sum)[,-1]
 
 pre_exp=read.csv2('data/populacao 2000-2020.csv')[-12,c(1,10:22)]
 pre_exp[4:7,1]='15 a 49 anos'
-#pre_exp[8:11,1]='50 anos e mais'
-pre_exp[8:10,1]='50 a 79 anos'
+pre_exp[8:11,1]='50 anos e mais'
 pre_exp=aggregate(.~FaixaEtaria,pre_exp,sum)[,-1]
 
 dummy=matrix(0,dim(pre_exp)[1],0)
@@ -32,104 +42,172 @@ pre_exp=dummy
 
 t_offset=1
 indice_inter=69
+true_indice_inter=indice_inter+9
 
 T_final=dim(dados)[2]
 
-out_var=5
-n_var=out_var*4+2
+out_var=4
 
 #### nível ####
 
-FF_nivel=array(0,c(out_var*2,out_var,T_final))
-G_nivel=diag(out_var*2)
+FF_nivel=matrix(0,out_var,T_final)
+FF_nivel[1,]=1
+bloc_final=gera_bloco_poly(order=2,
+                           value=FF_nivel,
+                           name='nivel_serie_1',
+                           D=1/0.95,
+                           m0=0,
+                           C0=500,
+                           W=0)
 
+
+for(i in c(2:out_var)){
+  FF_nivel=matrix(0,out_var,T_final)
+  FF_nivel[i,]=1
+  bloc_final=concat_bloco(bloc_final,
+                          gera_bloco_poly(order=2,
+                                          value=FF_nivel,
+                                          name='nivel_serie_' %>% paste0(i),
+                                          D=1/0.95,
+                                          m0=0,
+                                          C0=500,
+                                          W=0)
+  )
+}
 for(i in c(1:out_var)){
-  FF_nivel[(i-1)*2+1,i,]=1
-  G_nivel[2*i-1,2*i]=1
+  FF_sazo=matrix(0,out_var,T_final)
+  FF_sazo[i,]=1
+  bloc_final=concat_bloco(bloc_final,
+                          gera_bloco_sazo(period=2*pi/12,
+                                          value=FF_sazo,
+                                          name='sazo_serie_' %>% paste0(i),
+                                          D=1/0.98,
+                                          m0=0,
+                                          C0=500,
+                                          W=0)
+  )
+}
+for(i in c(1:out_var)){
+  FF_vac=matrix(0,out_var,T_final)
+  FF_vac[i,true_indice_inter:T_final]=1
+  W=array(0,c(1,1,T_final))
+  W[,,true_indice_inter]=1
+  bloc_final=concat_bloco(bloc_final,
+                          gera_bloco_poly(order=1,
+                                          value=FF_vac,
+                                          name='vac_serie_' %>% paste0(i),
+                                          D=1/1,
+                                          m0=0,
+                                          C0=0,
+                                          W=W)
+  )
+}
+for(i in c(1:out_var)){
+  FF_cov=matrix(0,out_var,T_final)
+  FF_cov[i,146:T_final]=1
+  W=array(0,c(1,1,T_final))
+  W[,,146]=1
+  bloc_final=concat_bloco(bloc_final,
+                          gera_bloco_poly(order=1,
+                                          value=FF_cov,
+                                          name='cov_serie_' %>% paste0(i),
+                                          D=1/1,
+                                          m0=0,
+                                          C0=0,
+                                          W=W)
+  )
 }
 
-D_nivel=matrix(1/0.95,out_var*2,out_var*2)
 
-#### vacina ####
+y=t(dados)
+y=y[,c(1,2,3,5,4)]
 
-FF_vac=array(0,c(out_var,out_var,T_final))
-for(i in out_var){
-  FF_vac[i,i,(T_final-indice_inter-9+1):T_final]=1
+resultado=ajusta_modelo(bloc_final,
+                        data_out=y,
+                        kernel=multinom_gi)
+
+pre_ps=exp(resultado$ft)/(rowSums(exp(resultado$ft[,1:out_var]))+1)
+
+ps=matrix(NA,T_final,5)
+ps_i=matrix(NA,T_final,5)
+ps_s=matrix(NA,T_final,5)
+
+for(i in c(1:T_final)){
+  p=pre_ps[i,]
+  var=resultado$Qt[,,i]
+  
+  diag_mult=diag(p*(1-p))
+  cov_mult=diag_mult%*%var%*%diag_mult
+  
+  p_i=p-2*sqrt(diag(cov_mult))
+  p_s=p+2*sqrt(diag(cov_mult))
+  
+  vec=matrix(1,4,1)
+  vec_rest=1-sum(p)
+  var_rest=t(vec)%*%cov_mult%*%vec
+  
+  p=c(p,vec_rest)
+  p_i=c(p_i,vec_rest-2*sqrt(var_rest))
+  p_s=c(p_s,vec_rest+2*sqrt(var_rest))
+  
+  ps[i,]=p
+  ps_i[i,]=p_i
+  ps_s[i,]=p_s
 }
 
-G_vac=matrix(1,out_var,out_var)
-
-D_vac=matrix(1/1,out_var,out_var)
-
-#### covid ####
-
-FF_cov=array(0,c(out_var,out_var,T_final))
-for(i in out_var){
-  FF_cov[i,i,]=c(rep(0,146),rep(1,T_final-146))
-}
-
-G_cov=matrix(1,out_var,out_var)
-
-D_cov=matrix(1/1,out_var,out_var)
-
-#### sazonalidade ####
-
-FF_sazo=array(0,c(2,out_var,T_final))
-FF_sazo[1,,]=1
-
-w=2*pi/12
-G_sazo=matrix(c(cos(w),sin(w),-sin(w),cos(w)),2,2)
-
-D_sazo=matrix(1/0.95,2,2)
-
-FF=array(0,c(n_var,out_var,T_final))
-FF[1:(2*out_var),,]=FF_nivel
-FF[(2*out_var+1):(3*out_var),,]=FF_vac
-FF[(3*out_var+1):(4*out_var),,]=FF_cov
-FF[(4*out_var+1):(4*out_var+2),,]=FF_sazo
-G=bdiag(G_nivel,G_vac,G_cov,G_sazo)
-D=bdiag(D_nivel,D_vac,D_cov,D_sazo)
-
-D=array(D,c(n_var,n_var,T_final))
-total=rowSums(t(dados[1:(out_var+1),]))
-
-resultado=multinom_gi(
-  y=t(dados[1:(out_var+1),]),
-  m0=matrix(0,n_var,1),
-  C0=diag(n_var)*50,
-  FF=FF,
-  G=G,
-  D=D,
-  W=0,
-  pop=total)
-
-ps=exp(resultado$ft)/(rowSums(exp(resultado$ft[,1:out_var]))+1)
-ps=cbind(ps,1-rowSums(ps))
-
-plot_data=dados[1:(out_var+1),]
+plot_data=dados[c(1,2,3,5,4),]
 for(i in c(1:T_final)){
   plot_data[,i]=plot_data[,i]/sum(plot_data[,i])
 }
+row.names(plot_data)=c(1:5)
 
 plot_data=plot_data %>%
   t %>%
   as.data.frame %>%
   mutate(t=1:T_final,) %>%
-  pivot_longer(1:6) %>%
+  pivot_longer(1:5) %>%
   mutate(name='V'%>%paste0(name),
          value=value)
 
 plot_ps=ps %>%
   as.data.frame %>%
   mutate(t=1:T_final) %>%
-  pivot_longer(1:6)
+  pivot_longer(1:5)
+
+plot_ps_i=ps_i %>%
+  as.data.frame %>%
+  mutate(t=1:T_final) %>%
+  pivot_longer(1:5)
+
+plot_ps_s=ps_s %>%
+  as.data.frame %>%
+  mutate(t=1:T_final) %>%
+  pivot_longer(1:5)
 
 plot_data=plot_data %>%
-  inner_join(plot_ps,c('t','name'))
+  inner_join(plot_ps,c('t','name')) %>%
+  inner_join(plot_ps_i,c('t','name')) %>%
+  inner_join(plot_ps_s,c('t','name'))
 
+plot_data$name=as.factor(plot_data$name)
+levels(plot_data$name)=c('00 a 04 anos',
+                         '05 a 09 anos',
+                         '10 a 14 anos',
+                         '50 anos e mais',
+                         '15 a 49 anos')
 
-ggplot(plot_data)+
-  geom_point(aes(x=t,y=value.x,color=name,shape='Observado'))+
-  geom_line(aes(x=t,y=value.y,color=name,linetype='Estimado'))+
-  geom_vline(xintercept=indice_inter+9,linetype='dashed')+
-  theme_bw()
+names(plot_data)=c('Data','Faixa.Etaria','Valor.Observado','Valor.esperado','I.C.inf','I.C.sup')
+
+ggplotly(
+  ggplot(plot_data)+
+    geom_point(aes(x=Data,y=Valor.Observado,color=Faixa.Etaria,linetype='Observado',shape='Observado'))+
+    geom_line(aes(x=Data,y=Valor.esperado,color=Faixa.Etaria,linetype='Estimado',shape='Estimado'))+
+    scale_x_continuous('Data',breaks=c(0:13)*12,labels=c(0:13)+2008)+
+    scale_y_continuous('Proporção de internações', breaks=,labels=function(x){round(100*x) %>% paste('%')})+
+    scale_linetype('')+
+    scale_shape('')+
+    geom_ribbon(aes(x=Data,ymin=I.C.inf,ymax=I.C.sup,color=Faixa.Etaria,fill=Faixa.Etaria,shape='I.C.'),alpha=0.5)+
+    geom_vline(xintercept=indice_inter+9,linetype='dashed')+
+    theme_bw()+
+    coord_cartesian(xlim=c(12,156),ylim=c(0,1))
+)
