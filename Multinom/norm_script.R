@@ -18,25 +18,57 @@ normal.analise <- function(y,m01, C01,m02,C02, F1,F2,G1,G2,D1,D2){
   # 
   
   model_tau <- function(x, parms){
+    
+    tau0=x[1]
+    tau1=x[2]
+    tau2=x[3]
+    tau3=x[4]
+    
+    Eq1=(q1 + f1^2)*exp(f2 + q2/2)
+    
+    par1=(tau2^2 - 4*tau1*tau3)
+    n0=2*tau0+ 1
+    
+    P11=(n0*(tau2^2))/(2*tau1*par1)
+    P12=-1/(2*tau1)
+    P1=P11+P12
+    
+    Eq2=f1*exp(f2 + q2/2)
+    P2=-tau2*n0/par1
+    
+    Eq3=exp(f2 + 0.5*q2)
+    P3=2*tau1*n0/par1
+    
+    Eq4=f2
+    P4=digamma(n0/2) - log(par1/(4*tau1))
+    
     output=c(
-    F1 =  (q1 + f1^2)*exp(f2 + q2/2) - ((2*x[1] + 1)*x[3]^2)/(2*x[2]*(x[3]^2) - 8*(x[2]^2)*x[4]) - 1/(2*x[2])  ,
-    F2 =  f1*exp(f2 + q2/2) + (2*x[1] + 1)*x[3]/(x[3]^2 - 4*x[2]*x[4]),
-    F3 =  exp(f1 + 0.5*q2) - 4*x[2]*(x[1] + 1/2)/(x[3]^2 - 4*x[2]*x[4]),
-    F4 =  f2 -digamma(x[1]+ 1/2) + log((x[3]**2)/(4*x[2])-x[4]))
-    print('c0')
-    print(-2*x[2])
-    print('mu0')
-    print(-x[3]/(2*x[2]))
-    print('d0/2')
-    print((x[3]**2)/(4*x[2])-x[4])
-    print('n0/2')
-    print(x[1]+0.5)
-    print('output')
-    print(output)
+    F1 =  Eq1-P1 ,
+    F2 =  Eq2-P2,
+    F3 =  Eq3-P3,
+    F4 =  Eq4-P4)
+    # print('c0')
+    # print(-2*x[2])
+    # print('mu0')
+    # print(-x[3]/(2*x[2]))
+    # print('d0/2')
+    # print((x[3]**2)/(4*x[2])-x[4])
+    # print('n0/2')
+    # print(x[1]+0.5)
+    # print('output')
+    # print(output)
+    # print('F1')
+    # print((q1 + f1^2)*exp(f2 + q2/2))
+    # print('F2')
+    # print(f1*exp(f2 + q2/2))
+    # print('F3')
+    # print(exp(f1 + 0.5*q2))
+    # print('F4')
+    # print(f2)
     return(output)
   }
   
-  root_init=c(0.3,-0.3,0.5,-0.3)
+  root_init=c(0.3,-0.3,0.0,-0.3)
   x=root_init
   c(
     (x[3]^2) - 4*x[2]*x[4]
@@ -131,6 +163,8 @@ normal.analise <- function(y,m01, C01,m02,C02, F1,F2,G1,G2,D1,D2){
   
   # Priori em t = 1
   
+  D=ifelse(D==0,1,D)
+  
   at[,1]          = G%*%m0
   Pt            <-    G%*%C0%*%(t(G))
   Rt[,,1]       <- D*Pt
@@ -150,7 +184,11 @@ normal.analise <- function(y,m01, C01,m02,C02, F1,F2,G1,G2,D1,D2){
   
   parms = c(f1,f2, q1, q2)
   
+  print(parms)
+  
   ss1 <- multiroot(f = model_tau , start = root_init, parms = parms)
+  print(ss1$root)
+  print(model_tau(ss1$root,parms))
   
   tau0[1] <- ss1$root[1]
   tau1[1] <- ss1$root[2]
@@ -202,8 +240,8 @@ normal.analise <- function(y,m01, C01,m02,C02, F1,F2,G1,G2,D1,D2){
     parms = c(f1,f2, q1, q2)
     
     ss1 <- multiroot(f = model_tau , start = root_init, parms = parms)
-    print('ss1$root')
-    print(ss1$root)
+    
+    print(model_tau(ss1$root,parms))
     
     tau0[t] <- ss1$root[1]
     tau1[t] <- ss1$root[2]
@@ -227,9 +265,6 @@ normal.analise <- function(y,m01, C01,m02,C02, F1,F2,G1,G2,D1,D2){
     
     fstar <- c(f1star[t,],   f2star[t,])
     Qstar <- matrix(c( Q1star[t,],  Q12star[t,],  Q12star[t,],  Q2star[t,]), byrow =F, ncol = 2)
-    
-    print(fstar)
-    print(Qstar)
     
     At[,,t] <- Rt[,,t]%*%F%*%ginv(Qt[,,t])
     mt[,t] <- at[,t] + At[,,t]%*%(fstar -ft[t,])
