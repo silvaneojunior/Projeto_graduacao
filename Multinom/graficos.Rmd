@@ -66,20 +66,31 @@ T_final=dim(dados)[2]
 
 out_var=4
 
-#### nível ####
 
-FF_nivel=matrix(0,out_var,T_final)
-FF_nivel[1,]=1
-bloc_final=gera_bloco_poly(order=2,
-                           value=FF_nivel,
-                           name='nivel_serie_1',
-                           D=1/0.95,
-                           m0=0,
-                           C0=1,
+#### offset ####
+
+offset=pre_exp
+offset=offset[c(1,2,3,5,4),]
+
+offset[1,]=offset[1,]/offset[5,]
+offset[2,]=offset[2,]/offset[5,]
+offset[3,]=offset[3,]/offset[5,]
+offset[4,]=offset[4,]/offset[5,]
+
+offset=log(offset[-5,])
+  
+bloc_final=gera_bloco_poly(order=1,
+                           value=offset,
+                           name='offset',
+                           D=1/1,
+                           m0=1,
+                           C0=0,
                            W=0)
 
+#### nível ####
 
-for(i in c(2:out_var)){
+
+for(i in c(1:out_var)){
   FF_nivel=matrix(0,out_var,T_final)
   FF_nivel[i,]=1
   bloc_final=concat_bloco(bloc_final,
@@ -235,9 +246,18 @@ ggplotly(
 # Tabela varicela
 
 ```{r, echo=FALSE}
-valor.estimado=exp(resultado$mts[(2*4*2+1):(2*4*2+4),156])
+vars=c()
+for(i in c(1:length(resultado$names))){
+  if(grepl('vac',names(resultado$names)[i])){
+    vars=c(vars,resultado$names[i])
+  }
+}
+
+vars=as.numeric(vars)
+
+valor.estimado=exp(resultado$mts[vars,156])
 lin_var=diag(valor.estimado)
-std=sqrt(diag(lin_var%*%resultado$Cts[(2*4*2+1):(2*4*2+4),(2*4*2+1):(2*4*2+4),156]%*%lin_var))
+std=sqrt(diag(lin_var%*%resultado$Cts[vars,vars,156]%*%lin_var))
 
 tabela=data.frame(Faixa.Etaria=c('00 a 04 anos',
   '05 a 09 anos',
@@ -254,9 +274,18 @@ kable(tabela,format="html", align = "c", booktabs=T,escape=F) %>%
 # Tabela COVID
 
 ```{r, echo=FALSE}
-valor.estimado=exp(resultado$mts[(5*4+1):(6*4),156])
+vars=c()
+for(i in c(1:length(resultado$names))){
+  if(grepl('cov',names(resultado$names)[i])){
+    vars=c(vars,resultado$names[i])
+  }
+}
+
+vars=as.numeric(vars)
+
+valor.estimado=exp(resultado$mts[vars,156])
 lin_var=diag(valor.estimado)
-std=sqrt(diag(lin_var%*%resultado$Cts[(5*4+1):(6*4),(5*4+1):(6*4),156]%*%lin_var))
+std=sqrt(diag(lin_var%*%resultado$Cts[vars,vars,156]%*%lin_var))
 
 tabela=data.frame(Faixa.Etaria=c('00 a 04 anos',
   '05 a 09 anos',

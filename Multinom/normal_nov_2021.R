@@ -42,7 +42,7 @@ G2 <- 1
 ## Passo t=0
 
 m01 <- matrix(0,nrow=n1,ncol=r)
-C01 <- matrix(c(100,0,0,10),n1,n1)
+C01 <- matrix(c(1,0,0,1),n1,n1)
 
 m02 <- matrix(0,nrow=n2,ncol=r)
 C02 <- diag(1,n2,n2)
