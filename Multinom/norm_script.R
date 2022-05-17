@@ -1,113 +1,19 @@
 normal.analise <- function(y,m01, C01,m02,C02, F1,F2,G1,G2,D1,D2){
   
   # Função a ser otimizada
-  # 
-  # otim1 <- function(x, f1,f2,q1,q2,q12, Omega){
-  #   alpha1 <- x[1]
-  #   alpha2 <- x[2]
-  #   alpha3 <- x[3]
-  #   
-  #   eqs = rbind(
-  #     f1 - digamma(alpha1) + digamma(alpha1 + alpha2 + alpha3),
-  #     f2 - digamma(alpha2) + digamma(alpha1 + alpha2 + alpha3),
-  #     q1 - trigamma(alpha1)  - trigamma(alpha1 + alpha2 + alpha3),
-  #     q2 - trigamma(alpha2) - trigamma(alpha1 + alpha2 + alpha3),
-  #     q12 - trigamma(alpha1 + alpha2 + alpha3))
-  #   return(t(eqs)%*%Omega%*%eqs)
-  # }
-  # 
   
   model_tau <- function(x, parms){
-    
-    # x[1] = log(c0)
-    # x[2] = mu0
-    # x[3] = log(d0)
-    # x[4] = log(n0)
-    
-    c0=exp(x[1])
-    mu0=x[2]
-    d0=exp(x[3])
-    n0=exp(x[4])+1
-    
-    tau0=n0/2-1/2
-    tau1=-c0/2
-    tau2=c0*mu0
-    tau3=-(c0*(mu0**2)+d0)/2
-    
-    Eq1=(q1 + f1^2)*exp(f2 + q2/2)
-    
-    #par1=(tau2^2 - 4*tau1*tau3)
-    #n0=2*tau0+ 1
-    par1=4*tau1*d0/2
-    
-    P1=-n0*(mu0^2)/d0+1/c0
-    
-    c0=1/(exp(f2 + q2/2)*q1)
-      
-    Eq2=f1*exp(f2 + q2/2)
-    P2=mu0*n0/d0
-    
-    Eq3=exp(f2 + 0.5*q2)
-    P3=n0/d0
-    
-    Eq4=f2
-    #P4=digamma(n0/2) - log(par1/(4*tau1))
-    P4=digamma(n0/2) - log(d0/2)
-    
     output=c(
-    F1 =  Eq1-P1 ,
-    F2 =  Eq2-P2,
-    F3 =  Eq3-P3,
-    F4 =  Eq4-P4)
-    # print('c0')
-    # print(-2*x[2])
-    # print('mu0')
-    # print(-x[3]/(2*x[2]))
-    # print('d0/2')
-    # print((x[3]**2)/(4*x[2])-x[4])
-    # print('n0/2')
-    # print(x[1]+0.5)
-    # print('output')
-    # print(output)
-    # print('F1')
-    # print((q1 + f1^2)*exp(f2 + q2/2))
-    # print('F2')
-    # print(f1*exp(f2 + q2/2))
-    # print('F3')
-    # print(exp(f1 + 0.5*q2))
-    # print('F4')
-    # print(f2)
+      F2 =  -digamma(exp(x[1])/2)+x[1]-q2/2-log(2)
+    )
     return(output)
   }
   
-  root_init=c(0.3,-0.3,0.0,-0.3)
-  x=root_init
-  c(
-    (x[3]^2) - 4*x[2]*x[4]
-    )
-  
-  f <- function(m) {
-    m[upper.tri(m)] <- t(m)[upper.tri(m)]
-    m
+  jacfunc=function(x,parms){
+    jac=matrix(c(-0.5*exp(x[1])*trigamma(exp(x[1])/2)+1),
+               1,1)
+    return(jac)
   }
-  
-  # otim2 <- function(x, f1,f2,q1,q2,q12, Omega){
-  #   tau1 <- x[1]
-  #   tau2 <- x[2]
-  #   tau0 <- x[3]
-  #   media.log = log(1/(1+exp(f1) + exp(f2))) - 
-  #     (q1/2)*(exp(f1)*exp(f2) + exp(f1))/(exp(f1)+exp(f2)+ 1)^2 - 
-  #     (q2/2)*(exp(f2)*exp(f1) + exp(f2))/(exp(f1)+exp(f2)+1)^2 + 
-  #     q12*(exp(f1 + f2)/(1+exp(f1)+exp(f2))) 
-  #   
-  #   eqs = rbind(
-  #     f1  - digamma(tau1) + digamma(tau0 - tau1 - tau2),
-  #     f2  - digamma(tau2) + digamma(tau0 - tau1 - tau2),
-  #     digamma(tau0) - digamma(tau0 - tau1 - tau2) + media.log)
-  #   
-  #   return(t(eqs)%*%Omega%*%eqs)
-  # }
-  # 
   
   
   # Definindo quantidades
@@ -194,82 +100,28 @@ normal.analise <- function(y,m01, C01,m02,C02, F1,F2,G1,G2,D1,D2){
   q2 = Qt[2,2,1]
   q12 = Qt[1,2,1]
   
-  # parms = c(f1,f2, q1, q2)
-  # 
-  # print(parms)
-  
-  #ss1 <- multiroot(f = model_tau , start = root_init, parms = parms)
-  
-  #print(model_tau(ss1$root,parms))
-  
-  # x=ss1$root
-  # c0=exp(x[1])
-  # mu0=x[2]
-  # d0=exp(x[3])
-  # n0=exp(x[4])+1
-  
   c0=1/(exp(f2 + q2/2)*q1)
   mu0=f1
   
   parms = c(f1,f2, q1, q2,c0,m0)
   
-  model_tau <- function(x, parms){
-
-    output=c(
-      F1 =  exp(f2+q2/2)-exp(x[1])/exp(x[2]) ,
-      F2 =  f2-digamma(exp(x[1])/2)+log(exp(x[2])/2)
-      )
-    return(output)
-  }
+  ss1 <- multiroot(f = model_tau , start = c(0), parms = parms,jacfunc = jacfunc, jactype='fullusr')
   
-  ss1 <- multiroot(f = model_tau , start = c(0,0), parms = parms)
   
   n0=exp(ss1$root[1])
-  d0=exp(ss1$root[2])
+  d0=n0/exp(f2+q2/2)
   
   tau0[1]=n0/2-1/2
   tau1[1]=-c0/2
   tau2[1]=c0*mu0
   tau3[1]=-(c0*(mu0**2)+d0)/2
   
-  ####
-  Eq1=(q1 + f1^2)*exp(f2 + q2/2)
-  
-  #par1=(tau2^2 - 4*tau1*tau3)
-  #n0=2*tau0+ 1
-  par1=4*tau1*d0/2
-  
-  P1=-n0*(mu0^2)/d0+1/c0
-  
-  Eq2=f1*exp(f2 + q2/2)
-  P2=mu0*n0/d0
-  
-  Eq3=exp(f2 + 0.5*q2)
-  P3=n0/d0
-  
-  Eq4=f2
-  #P4=digamma(n0/2) - log(par1/(4*tau1))
-  P4=digamma(n0/2) - log(d0/2)
-  
-  output=c(
-    F1 =  Eq1-P1 ,
-    F2 =  Eq2-P2,
-    F3 =  Eq3-P3,
-    F4 =  Eq4-P4)
-  ####
-  
-  #print(output)
-  
-  # tau0[1] <- ss1$root[1]
-  # tau1[1] <- ss1$root[2]
-  # tau2[1] <- ss1$root[3]
-  # tau3[1] <- ss1$root[4]
-  
-  
   tau0_star[1]  <-  tau0[1] + 1/2
   tau1_star[1]  <-  tau1[1] - 1/2
   tau2_star[1]  <-  tau2[1] + y[1]
   tau3_star[1]  <-  tau3[1] - y[1]^2
+  
+  trigamma(n0/2+1/2)+(digamma(n0/2+1/2)-log(d0/2))
   
   aux_1=digamma(tau0_star[1] + 0.5) -log(((tau2_star[1]^2)/(4*tau1_star[1])) - tau3_star[1])
   
@@ -288,9 +140,6 @@ normal.analise <- function(y,m01, C01,m02,C02, F1,F2,G1,G2,D1,D2){
   Ct[,,1] <- Rt[,,1] +  At[,,1]%*%(Qstar - Qt[,,1])%*%t(At[,,1])
   
   for(t in 2:T){
-    print('time')
-    print(t)
-    
     at[,t] = G%*%mt[,t-1] 
     Pt <- G%*%Ct[,,t-1]%*%(t(G))
     Rt[,,t] <- D*Pt
@@ -307,63 +156,20 @@ normal.analise <- function(y,m01, C01,m02,C02, F1,F2,G1,G2,D1,D2){
     q2 = Qt[2,2,t]
     q12 = Qt[1,2,t]
     
-    # parms = c(f1,f2, q1, q2)
-    # 
-    # print(parms)
-    # 
-    # ss1 <- multiroot(f = model_tau , start = root_init, parms = parms)
-    # 
-    # #print(model_tau(ss1$root,parms))
-    # 
-    # x=ss1$root
-    # c0=exp(x[1])
-    # mu0=x[2]
-    # d0=exp(x[3])
-    # n0=exp(x[4])+1
-    
     c0=1/(exp(f2 + q2/2)*q1)
     mu0=f1
     
     parms = c(f1,f2, q1, q2,c0,mu0)
     
-    print(f2)
-    print(q2)
-    
-    jacfunc=function(x,parms){
-      jac=matrix(c(-exp(x[1]-x[2]),
-                   -exp(x[1])*trigamma(exp(x[1])/2)/2,
-                   exp(x[1]-x[2]),
-                   1),
-                 2,2)
-      print(jac)
-      return(jac)
-    }
-    
-    model_tau <- function(x, parms){
-      output=c(
-        F1 =  exp(f2+q2/2)-exp(x[1]-x[2]) ,
-        F2 =  f2-digamma(exp(x[1])/2)+x[2]-log(2)
-      )
-      return(output)
-    }
-    
-    ss1 <- multiroot(f = model_tau , start = c(0,0), parms = parms,jacfunc = jacfunc, jactype='fullusr')
-    
-    print('c0 e mu0')
-    print(ss1$root)
+    ss1 <- multiroot(f = model_tau , start = c(0), parms = parms,jacfunc = jacfunc, jactype='fullusr')
     
     n0=exp(ss1$root[1])
-    d0=exp(ss1$root[2])
+    d0=n0/exp(f2+q2/2)
     
     tau0[t]=n0/2-1/2
     tau1[t]=-c0/2
     tau2[t]=c0*mu0
     tau3[t]=-(c0*(mu0**2)+d0)/2
-    
-    # tau0[t] <- ss1$root[1]
-    # tau1[t] <- ss1$root[2]
-    # tau2[t] <- ss1$root[3]
-    # tau3[t] <- ss1$root[4]
     
     tau0_star[t]  <-  tau0[t] + 1/2
     tau1_star[t]  <-  tau1[t] - 1/2

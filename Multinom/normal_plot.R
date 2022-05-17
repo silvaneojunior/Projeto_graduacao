@@ -15,10 +15,7 @@ year <- seq(as.Date("1926/10/1"), by = "month", length.out = length(y))
 par(mar=c(4,3,3,1))
 plot(y,  pch = 20, xlab= "", ylab = "", cex = 0.6)
 T <- length(y)
-y <- y*10
-#y=(y-mean(y))/sd(y)
-
-#y=rnorm(length(y))
+y <- y
 
 
 n1 <- 1
@@ -45,7 +42,7 @@ G2 <- 1
 ## Passo t=0
 
 m01 <- matrix(0,nrow=n1,ncol=r)
-C01 <- matrix(c(100,0,0,10),n1,n1)
+C01 <- matrix(c(1,0,0,1),n1,n1)
 
 m02 <- matrix(0,nrow=n2,ncol=r)
 C02 <- diag(1,n2,n2)
@@ -53,7 +50,7 @@ C02 <- diag(1,n2,n2)
 
 ## Utilizando fator de desconto
 D1 <- 1/0.85
-D2 <- 1/0.9
+D2 <- 1/0.90
 resultados_phi_dinamico<- normal.analise(y, m01, C01,m02,C02,F1, F2, G1, G2, D1, D2)
 
 
