@@ -1,0 +1,339 @@
+---
+title: "Resultado da aproximação numérica"
+author: "Silvaneo Viera dos Santos Junior"
+date: "5/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE,
+	fig.height=6,
+	fig.width=10
+)
+library(ggplot2)
+library(plotly)
+library(Matrix)
+library(rootSolve)
+library(MASS)
+
+source('norm_script.R')
+
+
+# ibm ---------------------
+m.ibmln <-read.table("m-ibmln.txt", quote="\"", comment.char="")
+y <- m.ibmln$V1
+
+year <- seq(as.Date("1926/10/1"), by = "month", length.out = length(y))
+par(mar=c(4,3,3,1))
+plot(y,  pch = 20, xlab= "", ylab = "", cex = 0.6)
+T <- length(y)
+y <- y*10
+#y=(y-mean(y))/sd(y)
+
+#y=rnorm(length(y))
+
+
+n1 <- 1
+n2 <- 1
+T <- length(y)
+r <- 1
+
+# DEFININDO O VETOR F
+
+F2 <- matrix(rep(1,n2),nrow=n2,ncol=T)
+F1 <- matrix(rep(c(1),n1),nrow=n1,ncol=T)
+
+
+# DEFININDO A MATRIZ G
+
+# Bloco de tendęncia
+
+G1 <- 1
+
+
+G2 <- 1
+
+
+## Passo t=0
+
+m01 <- matrix(0,nrow=n1,ncol=r)
+C01 <- matrix(c(100,0,0,10),n1,n1)
+
+m02 <- matrix(0,nrow=n2,ncol=r)
+C02 <- diag(1,n2,n2)
+
+
+## Utilizando fator de desconto
+D1 <- 1/0.85
+D2 <- 1/0.9
+resultados_phi_dinamico1<- normal.analise1(y, m01, C01,m02,C02,F1, F2, G1, G2, D1, D2)
+
+
+resultados_phi_dinamico2<- normal.analise2(y, m01, C01,m02,C02,F1, F2, G1, G2, D1, D2)
+```
+
+## Média suavizada (mts[1,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_point(aes(x=1:T,y=y,color='Dados observados'))+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$mts[1,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$mts[1,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```
+
+## Log precisão suavizada (mts[2,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$mts[2,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$mts[2,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```
+
+## Variânccia da média suavizada (Cts[1,1,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$Cts[1,1,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$Cts[1,1,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```
+
+## Variânccia da log precisão suavizada (Cts[2,2,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$Cts[2,2,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$Cts[2,2,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```
+
+## Covariância dos parâmetros suavizados (Cts[1,2,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$Cts[1,2,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$Cts[1,2,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```
+
+
+## Média não suavizada (mt[1,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_point(aes(x=1:T,y=y,color='Dados observados'))+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$mt[1,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$mt[1,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```
+
+## Log precisão não suavizada (mt[2,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$mt[2,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$mt[2,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```
+
+## Variânccia da média não suavizada (Ct[1,1,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$Ct[1,1,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$Ct[1,1,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```
+
+## Variânccia da log precisão não suavizada (Ct[2,2,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$Ct[2,2,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$Ct[2,2,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```
+
+## Covariância dos parâmetros não suavizados (Ct[1,2,])
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+ggplotly(
+ggplot()+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico1$Ct[1,2,],color='Ajuste com Newton-Raphson'))+
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico1$f1 + 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                ymin=resultados_phi_dinamico1$f1 - 2*sqrt(resultados_phi_dinamico1$Q1),
+  #                color='Ajuste com Newton-Raphson',
+  #                fill='Ajuste com Newton-Raphson'),
+  #            alpha=0.5)+
+  geom_line(aes(x=1:T,y=resultados_phi_dinamico2$Ct[1,2,],color='Ajuste com aproximação analítica'))+
+  
+  #geom_ribbon(aes(x=1:T,
+  #                ymax=resultados_phi_dinamico2$f1 + 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                ymin=resultados_phi_dinamico2$f1 - 2*sqrt(resultados_phi_dinamico2$Q1),
+  #                color='Ajuste com aproximação analítica',
+  #                fill='Ajuste com aproximação analítica'),
+  #            alpha=0.5)+
+  theme_bw())
+```

@@ -1,0 +1,157 @@
+---
+title: "Ajuste antimicro"
+author: "Silvaneo Viera dos Santos Junior"
+date: "5/25/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+library(dlm)   # Pode ser substituido pela bilbioteca Matrix.
+library(tidyr) # Opcional: ajuda na clareza do código da barra de loading.
+library(hms)   # Opcional: serve para formatar o ETA na barra de loading.
+library(beepr) # Opcional: serve para chamar a função beep.
+library(mgcv)
+library(plsmselect)
+library(ggplot2)
+library(plotly)
+library(kableExtra)
+source('C:\\Jupyter\\TCC\\Projeto_graduacao\\Codigo_raira\\codigo_raira_VSilvaneo.R')
+
+options(enconding='UTF-8')
+
+# Ajustando os dados
+raw_dados=read.csv('Wania/data/dados_wania_completo.CSV',row.names=1)
+raw_dados=t(raw_dados) %>% as.data.frame
+dados=raw_dados
+dados$Tempo=c(1:dim(dados)[1])
+dados$N_OBITOS=dados$N_OBITOS %>% as.integer
+dados$log_pop=dados$Pac_dia %>% log
+dados$intervencao=c(rep(0,54-1),rep(1,101-54+1))
+dados$prorp_covid=dados$Entradas_COVID/dados$Entradas
+
+```
+
+## Ajuste para a soma dos antimicrobianos
+
+```{r fig.height=6, fig.width=10}
+dados$outcome=dados$Soma_Antimicro
+
+suv_t=gam(outcome~intervencao+prorp_covid+s(Tempo),
+               family=gaussian ,data=dados)
+
+(ggplot()+
+  geom_point(aes(x=dados$Tempo,y=dados$outcome,shape='Valores observados'))+
+  geom_line(aes(x=dados$Tempo,y=suv_t$fitted.values,shape='Valor estimado para a média'))+
+  geom_vline('Data',xintercept=54,linetype='dashed')+
+  scale_shape_manual('',values=c(16,16))+
+  scale_x_continuous('Data',breaks=0:10*12+1,labels=row.names(raw_dados)[0:10*12+1])+
+  scale_y_continuous('Soma ponderada dos antimicrobianos')+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle=90)))%>% ggplotly
+```
+
+Intervalos de confiança de $95\%$.
+
+
+```{r}
+media=suv_t$coefficients[1:3]
+varia=suv_t$Vp[1:3,1:3]%>%diag
+
+ic_inf=media-qt(1-(1-0.95)/2,suv_t$df.residual)*sqrt(varia)
+ic_sup=media+qt(1-(1-0.95)/2,suv_t$df.residual)*sqrt(varia)
+
+p_value=2*(1-pt(abs(media/sqrt(varia)),suv_t$df.residual))
+
+media=media %>% round(2)
+varia=sqrt(varia) %>% round(2)
+ic_inf=ic_inf %>% round(2)
+ic_sup=ic_sup %>% round(2)
+p_value=p_value %>% round(4)
+
+p_value=ifelse(p_value<1e-16,'$<10^{-16}$',p_value)
+
+
+media=paste0('$',media,'$')
+varia=paste0('$',varia,'$')
+ic_inf=paste0('$',ic_inf,'$')
+ic_sup=paste0('$',ic_sup,'$')
+p_value=paste0('$',p_value,'$')
+
+data_tabela=data.frame(
+  enc2utf8(c('<b>Intercepto<\\b>','<b>Intervenção<\\b>','<b>Pandemida da COVID-19<\\b>')),
+  media,
+  varia,
+  ic_inf,
+  ic_sup,
+  p_value,
+  check.names = FALSE)
+row.names(data_tabela)=NULL
+names(data_tabela)=enc2utf8(c(' ','Média','Desvio padrão','I.C. inferior','I.C. superior','p-valor'))
+kable(data_tabela,format="html", align = "r",valign='c', booktabs=T,escape=F) %>%
+  kable_styling(position = "center")
+```
+
+## Ajuste para o Meropenem
+
+```{r fig.height=6, fig.width=10}
+dados$outcome=dados$Mero
+
+suv_t=gam(outcome~intervencao+prorp_covid+s(Tempo),
+               family=gaussian ,data=dados)
+
+(ggplot()+
+  geom_point(aes(x=dados$Tempo,y=dados$outcome,shape='Valores observados'))+
+  geom_line(aes(x=dados$Tempo,y=suv_t$fitted.values,shape='Valor estimado para a média'))+
+  geom_vline('Data',xintercept=54,linetype='dashed')+
+  scale_shape_manual('',values=c(16,16))+
+  scale_x_continuous('Data',breaks=0:10*12+1,labels=row.names(raw_dados)[0:10*12+1])+
+  scale_y_continuous('Meropenem')+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle=90)))%>% ggplotly
+```
+
+Intervalos de confiança de $95\%$.
+
+
+```{r}
+media=suv_t$coefficients[1:3]
+varia=suv_t$Vp[1:3,1:3]%>%diag
+
+ic_inf=media-qt(1-(1-0.95)/2,suv_t$df.residual)*sqrt(varia)
+ic_sup=media+qt(1-(1-0.95)/2,suv_t$df.residual)*sqrt(varia)
+
+p_value=2*(1-pt(abs(media/sqrt(varia)),suv_t$df.residual))
+
+media=media %>% round(2)
+varia=sqrt(varia) %>% round(2)
+ic_inf=ic_inf %>% round(2)
+ic_sup=ic_sup %>% round(2)
+p_value=p_value %>% round(4)
+
+p_value=ifelse(p_value<1e-16,'$<10^{-16}$',p_value)
+
+
+media=paste0('$',media,'$')
+varia=paste0('$',varia,'$')
+ic_inf=paste0('$',ic_inf,'$')
+ic_sup=paste0('$',ic_sup,'$')
+p_value=paste0('$',p_value,'$')
+
+data_tabela=data.frame(
+  enc2utf8(c('<b>Intercepto<\\b>','<b>Intervenção<\\b>','<b>Pandemida da COVID-19<\\b>')),
+  media,
+  varia,
+  ic_inf,
+  ic_sup,
+  p_value,
+  check.names = FALSE)
+row.names(data_tabela)=NULL
+names(data_tabela)=enc2utf8(c(' ','Média','Desvio padrão','I.C. inferior','I.C. superior','p-valor'))
+kable(data_tabela,format="html", align = "r",valign='c', booktabs=T,escape=F) %>%
+  kable_styling(position = "center")
+```

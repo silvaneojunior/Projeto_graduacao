@@ -8,14 +8,9 @@ source('norm_script.R')
 
 
 # ibm ---------------------
-m.ibmln <-read.table("m-ibmln.txt", quote="\"", comment.char="")
-y <- m.ibmln$V1
-
-year <- seq(as.Date("1926/10/1"), by = "month", length.out = length(y))
-par(mar=c(4,3,3,1))
-plot(y,  pch = 20, xlab= "", ylab = "", cex = 0.6)
+y <- read.csv('data/dados_wania_completo.CSV')[21,-1]
 T <- length(y)
-y <- y*10
+y <- as.numeric(y)
 #y=(y-mean(y))/sd(y)
 
 #y=rnorm(length(y))
@@ -45,17 +40,20 @@ G2 <- 1
 ## Passo t=0
 
 m01 <- matrix(0,nrow=n1,ncol=r)
-C01 <- matrix(c(100,0,0,10),n1,n1)
+C01 <- matrix(c(1,0,0,1),n1,n1)
 
 m02 <- matrix(0,nrow=n2,ncol=r)
 C02 <- diag(1,n2,n2)
 
 
 ## Utilizando fator de desconto
-D1 <- 1/0.85
-D2 <- 1/0.9
-resultados_phi_dinamico<- normal.analise(y, m01, C01,m02,C02,F1, F2, G1, G2, D1, D2)
+D1 <- 1/0.95
+D2 <- 1/1
+resultados_phi_dinamico<- normal.analise1(y, m01, C01,m02,C02,F1, F2, G1, G2, D1, D2)
 
+
+plot(y,  pch = 20, cex = .4)
+lines(resultados_phi_dinamico$mts[1,], col = 4)
 
 
 plot(y,  pch = 20, cex = .4)
