@@ -1,0 +1,257 @@
+---
+title: "Graficos varicela"
+author: "Silvaneo Viera dos Santos Junior"
+date: "5/6/2022"
+output: html_document
+header-includes:
+- \usepackage{cancel}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+<style>
+body {
+text-align: justify}
+</style>
+
+### Regiões de confiança
+
+```{r, fig.height=8, fig.width=10}
+library(dlm)   # Pode ser substituido pela bilbioteca Matrix.
+library(tidyr) # Opcional: ajuda na clareza do código da barra de loading.
+library(hms)   # Opcional: serve para formatar o ETA na barra de loading.
+library(beepr) # Opcional: serve para chamar a função beep.
+library(feather)
+library(plotly)
+library(kableExtra)
+
+library(readxl)
+library(janitor)
+library(ggplot2)
+library(dplyr)
+library(Matrix)
+library(MASS)
+library(rootSolve)
+
+source(getwd() %>% paste0('/R/main.R'))
+
+# Ajustando os dados
+
+dados=read.csv('data/varicela internacoes.csv')[,c(1,7:162)]
+dados[1:2,1]='00 a 04 anos'
+dados[5:8,1]='15 a 49 anos'
+dados[9:12,1]='50 anos e mais'
+labels=unique(dados$FaixaEtaria)
+dados=aggregate(.~FaixaEtaria,dados,sum)[,-1]
+
+pre_exp=read.csv2('data/populacao 2000-2020.csv')[-12,c(1,10:22)]
+pre_exp[4:7,1]='15 a 49 anos'
+pre_exp[8:11,1]='50 anos e mais'
+pre_exp=aggregate(.~FaixaEtaria,pre_exp,sum)[,-1]
+
+dummy=matrix(0,dim(pre_exp)[1],0)
+nomes=c()
+for(ano in c(2008:2020)){
+  for(mes in c(1:12)){
+    nomes=c(nomes,paste0('X',ano,'.',mes))
+    dummy=cbind(dummy,pre_exp[,ano-2007])
+  }
+}
+pre_exp=dummy
+#idade_indice=3
+
+t_offset=1
+indice_inter=69
+true_indice_inter=indice_inter+9
+
+T_final=dim(dados)[2]
+
+out_var=4
+
+
+#### offset ####
+
+data_order=c(1,2,3,5,4)
+
+offset=pre_exp
+offset=offset[data_order,]
+
+y=t(dados)
+y=y[,data_order]
+
+offset[1,]=offset[1,]/offset[5,]
+offset[2,]=offset[2,]/offset[5,]
+offset[3,]=offset[3,]/offset[5,]
+offset[4,]=offset[4,]/offset[5,]
+
+offset=log(offset[-5,])
+  
+bloc_final=gera_bloco_poly(order=1,
+                           value=offset,
+                           name='offset',
+                           D=1/1,
+                           m0=1,
+                           C0=0,
+                           W=0)
+
+#### nível ####
+
+
+for(i in c(1:out_var)){
+  FF_nivel=matrix(0,out_var,T_final)
+  FF_nivel[i,]=1
+  bloc_final=concat_bloco(bloc_final,
+                          gera_bloco_poly(order=2,
+                                          value=FF_nivel,
+                                          name='nivel_serie_' %>% paste0(i),
+                                          D=1/0.95,
+                                          m0=0,
+                                          C0=1,
+                                          W=0)
+  )
+}
+for(i in c(1:out_var)){
+  FF_sazo=matrix(0,out_var,T_final)
+  FF_sazo[i,]=1
+  bloc_final=concat_bloco(bloc_final,
+                          gera_bloco_sazo(period=12,
+                                          value=FF_sazo,
+                                          name='sazo_serie_' %>% paste0(i),
+                                          D=1/0.98,
+                                          m0=0,
+                                          C0=1,
+                                          W=0)
+  )
+}
+for(i in c(1:out_var)){
+  FF_vac=matrix(0,out_var,T_final)
+  FF_vac[i,true_indice_inter:T_final]=1
+  W=array(0,c(1,1,T_final))
+  W[,,true_indice_inter]=0
+  bloc_final=concat_bloco(bloc_final,
+                          gera_bloco_poly(order=1,
+                                          value=FF_vac,
+                                          name='vac_serie_' %>% paste0(i),
+                                          D=1/1,
+                                          m0=0,
+                                          C0=1,
+                                          W=W)
+  )
+}
+for(i in c(1:out_var)){
+  FF_cov=matrix(0,out_var,T_final)
+  FF_cov[i,146:T_final]=1
+  W=array(0,c(1,1,T_final))
+  W[,,146]=1
+  bloc_final=concat_bloco(bloc_final,
+                          gera_bloco_poly(order=1,
+                                          value=FF_cov,
+                                          name='cov_serie_' %>% paste0(i),
+                                          D=1/1,
+                                          m0=0,
+                                          C0=0,
+                                          W=W)
+  )
+}
+
+resultado=ajusta_modelo(bloc_final,
+                        data_out=y,
+                        kernel='Multinomial')
+```
+
+```{r, fig.height=8, fig.width=8}
+
+angle=2*pi*(c(1:20)/20)
+r=sqrt(qchisq(0.95,2))
+
+x=cos(angle)*r
+y=sin(angle)*r
+
+plot_data=matrix(0,0,3)
+
+tile_data=matrix(1,4,4)
+
+for( i in c(18:21)){
+  for(j in c(18:21)){
+if(i==j){
+data=matrix(NA,2,20,byrow=TRUE)
+
+data=cbind(paste0(labels[-data_order[5]][i-17],'-',labels[-data_order[5]][j-17]),t(data))
+plot_data=rbind(plot_data,data)
+  }else{
+    
+sd1=resultado$Cts[i,i,156]**0.5
+sd2=resultado$Cts[j,j,156]**0.5
+correl=resultado$Cts[i,j,156]/(sd1*sd2)
+
+tile_data[i-17,j-17]=correl
+
+cov_mat=resultado$Cts[c(i,j),c(i,j),156]
+transf=chol(cov_mat)
+
+data=matrix(c(x,y),2,20,byrow=TRUE)
+
+data=transf%*%data
+
+for(k in c(1:20)){
+  data[,k]=data[,k]+resultado$mts[c(i,j),156]
+}
+
+data=cbind(paste0(labels[-data_order[5]][i-17],'-',labels[-data_order[5]][j-17]),t(data))
+plot_data=rbind(plot_data,data)
+}
+    
+  }
+}
+
+plot_data=as.data.frame(plot_data)
+names(plot_data)=c('label','X','Y')
+
+plot_data$X=as.numeric(plot_data$X)
+plot_data$Y=as.numeric(plot_data$Y)
+
+ggplot(plot_data)+
+  geom_path(aes(x=X,y=Y))+
+  geom_hline(yintercept=0,linetype='dashed')+
+  geom_vline(xintercept=0,linetype='dashed')+
+  theme_bw()+
+  facet_wrap(~label)+
+  coord_equal(xlim=c(-1,1),ylim=c(-1,1))
+
+```
+
+```{r, fig.height=8, fig.width=8}
+plot_tile_data=matrix(0,0,3)
+
+for(i in c(1:4)){
+  for(j in c(1:4)){
+    if(i==j){
+      plot_tile_data=rbind(plot_tile_data,c(i,j,NA))
+    }else{
+      plot_tile_data=rbind(plot_tile_data,c(i,j,tile_data[i,j]))
+    }
+  }
+}
+
+
+plot_tile_data=as.data.frame(plot_tile_data)
+names(plot_tile_data)=c('X','Y','color')
+
+plot_tile_data$X=as.numeric(plot_tile_data$X)
+plot_tile_data$Y=as.numeric(plot_tile_data$Y)
+
+ggplot(plot_tile_data)+
+  geom_tile(aes(x=X,y=Y,fill=color))+
+  geom_text(aes(x=X,y=Y,label=round(color,2)))+
+  scale_fill_gradient2(low='red',mid='green',high='blue',limits=c(-1,1))+
+  scale_x_continuous(labels=labels[-data_order[5]],breaks=c(1:4))+
+  scale_y_continuous(labels=labels[-data_order[5]],breaks=c(1:4))+
+  theme_bw()
+
+```
