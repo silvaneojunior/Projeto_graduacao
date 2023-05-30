@@ -16,7 +16,7 @@ dados$log_pop=dados$Pac_dia %>% log
 dados$intervencao=c(rep(0,54-1),rep(1,101-54+1))
 dados$prorp_covid=dados$Entradas_COVID/dados$Entradas
 
-dados$outcome=dados$Soma_Antimicro
+dados$outcome=dados$Soma_Antimicro-dados$Zerbaxa-dados$Torgena
 
 suv_t=gam(outcome~intervencao+prorp_covid+s(Tempo),
                family=gaussian ,data=dados)
@@ -25,12 +25,17 @@ lines(dados$Tempo,suv_t$fitted.values)
 
 summary(suv_t)
 
+cut_in=29
+cut_out=101
 
-dados$outcome=dados$Mero
+dados$outcome=dados$Pipetazo
 
-suv_t=gam(outcome~intervencao+prorp_covid+s(Tempo),
+suv_t=gam(outcome[cut_in:cut_out]~intervencao[cut_in:cut_out]+prorp_covid[cut_in:cut_out]+s(Tempo[cut_in:cut_out]),
           family=gaussian ,data=dados)
-plot(dados$Tempo,dados$outcome)
-lines(dados$Tempo,suv_t$fitted.values)
+plot(dados$Tempo[cut_in:cut_out],dados$outcome[cut_in:cut_out])
+lines(dados$Tempo[cut_in:cut_out],suv_t$fitted.values)
 
 summary(suv_t)
+
+
+rowSums(dados[,9:20])

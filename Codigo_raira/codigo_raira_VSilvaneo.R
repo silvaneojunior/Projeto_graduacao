@@ -441,159 +441,6 @@ ajusta_modelo <- function(...,data_out,kernel=poisson_gi_exp,offset=NULL,log_off
   
 }
 
-predict=function(model,t=1,offset=NULL,log_offset=NULL,FF=NULL,D=NULL,W=NULL,plot=TRUE,IC_prob=0.95){
-  n=dim(model$mts)[1]
-  t_last=dim(model$mts)[2]
-  
-  if(t>10){
-    warning('Warning: Prediction window is big, results will probabily be unreliable.')
-  }
-  
-  #### Consistency check ####
-  if(is.null(FF)){
-    FF=array(model$F[,t_last],c(n,t))
-  }
-  if(is.null(D)){
-    D=array(model$D[,,t_last],c(n,n,t))
-    D[,,2:t_last]=0
-  }else{if(all(dim(D)==1)){
-    D=ifelse(model$D==0,0,D)
-    D[,,2:t_last]=0
-  }else{if(length(dim(D))==2 | (length(dim(D))==3 & dim(D)[3]==1)){
-    D=array(D,c(n,n,t))
-    D[,,2:t_last]=0
-  }}
-  }
-  if(is.null(W)){
-    W=array(model$W[,,t_last],c(n,n,t))
-    W[,,2:t_last]=0
-  }else{if(all(dim(W)==1)){
-    W=array(diag(n)*W,c(n,n,t))
-    W[,,2:t_last]=0
-  }else{if(length(dim(W))==2 | (length(dim(W))==3 & dim(W)[3]==1)){
-    W=array(W,c(n,n,t))
-    W[,,2:t_last]=0
-  }}
-  }
-  if(!is.null(offset) & !is.null(log_offset)){
-    stop('Erro: Cannot set both offset and log_offset. Choose only one.')
-  }else{if(!is.null(offset)){
-    log_offset=log(offset)
-  }else{if(!is.null(log_offset)){
-    offset=exp(log_offset)
-  }else{
-    offset=1
-    log_offset=0
-  }}}
-  if(1==length(log_offset)){
-    log_offset=rep(log_offset,t)
-    offset=rep(offset,t)
-  }
-  
-  if(dim(FF)[2]!=t){
-    stop(paste0('Error: FF should have one column for each time or exactly 1 column, got ',dim(FF)[2],'!=',t,'.'))
-  }
-  if(dim(FF)[1]!=n){
-    stop(paste0('Error: FF should have one line for each latent variable in the model, got ',dim(FF)[1],'!=',n,'.'))
-  }
-  if(dim(D)[3]!=t){
-    stop(paste0('Error: D should have 3º dimention equal to t or 1, got ',dim(D)[3],'.'))
-  }
-  if(dim(D)[1]!=n | dim(D)[2]!=n){
-    stop(paste0('Error: D should have 1º and 2º dimentions equal the number of latent variables in the model, got (',dim(D)[1],',',dim(D)[2],')!=(',n,',',n,').'))
-  }
-  if(dim(W)[1]!=n | dim(W)[2]!=n){
-    stop(paste0('Error: W should have 1º and 2º dimentions equal the number of latent variables in the model, got (',dim(W)[1],',',dim(W)[2],')!=(',n,',',n,').'))
-  }
-  if(dim(W)[3]!=t){
-    stop(paste0('Error: W should have 3º dimention equal to t or 1, got ',dim(W)[3],'.'))
-  }
-  if(length(offset)!=t){
-    stop(paste0('Error: Offset should have length 1 or equal to t, got ',dim(offset)[1],'!=',n,'.'))
-  }
-  #####
-  
-  G=model$G
-  
-  m0=model$mt[,t_last]
-  C0=model$Ct[,,t_last]
-  
-  D <- ifelse(D == 0, 1, D)
-  
-  # Definindo objetos
-  at <- matrix(0, ncol=t, nrow=n)
-  mt <- matrix(0, ncol=t, nrow=n)
-  ft <- matrix(0, ncol=1, nrow=t)
-  qt <- matrix(0, ncol=1, nrow=t)
-  Ct <- array(rep(diag(n),t),dim=c(n,n,t))
-  Rt <- array(rep(diag(n),t),dim=c(n,n,t))
-  a = b= 0
-  pred = var.pred = icl.pred = icu.pred = matrix(0, ncol=1, nrow=t)
-  
-  ## Algoritmo
-  
-  # Priori
-  
-  at[,1] <- G%*%m0
-  Rt[,,1] <-G%*%C0%*%(t(G))*D[,,1]+W[,,1]
-  
-  reduc_RFF=Rt[,,1]%*%FF[,1]
-  
-  # Previsão 1 passo a frente
-  ft[1,] <- t(FF[,1])%*%at[,1] + log_offset[1]
-  qt[1,] <- t(FF[,1])%*%reduc_RFF
-  
-  a[1] <- (1/qt[1,])
-  b[1] <- (exp(-ft[1,] -0.5*qt[1,])/(qt[1,])) 
-  
-  # Preditiva em t = 1
-  
-  pred[1] <- a[1]/ b[1]
-  var.pred <- a[1]*(b[1]+1)/(b[1])^2
-  icl.pred[1]<-qnbinom((1-IC_prob)/2, a[1], (b[1]/(b[1] +1)))
-  icu.pred[1]<-qnbinom(1-(1-IC_prob)/2, a[1], (b[1]/(b[1] +1)))
-  
-  for(i in c(2:t)){
-    # Priori
-    
-    at[,i] <- G%*%at[,i-1]
-    Rt[,,i] <-G%*%Rt[,,i-1]%*%(t(G))*D[,,i]+W[,,i]
-    
-    reduc_RFF=Rt[,,i]%*%FF[,i]
-    
-    # Previsão 1 passo a frente
-    ft[i,] <- t(FF[,i])%*%at[,i] + log_offset[i]
-    qt[i,] <- t(FF[,i])%*%reduc_RFF
-    
-    a[i] <- (1/qt[i,])
-    b[i] <- (exp(-ft[i,] -0.5*qt[i,])/(qt[i,])) 
-    
-    pred[i] <- a[i]/ b[i]
-    var.pred <- a[i]*(b[i]+1)/(b[i])^2
-    icl.pred[i]<-qnbinom((1-IC_prob)/2, a[i], (b[i]/(b[i] +1)))
-    icu.pred[i]<-qnbinom(1-(1-IC_prob)/2, a[i], (b[i]/(b[i] +1)))
-  }
-  if(plot){
-    fill_list=c('#2596be','#2596be','black')
-    names(fill_list)=c(paste0('Prediction I.C. (',(100*IC_prob) %>% round(),'%)'),'Prediction','Observed values')
-    color_list=c('#2596be','black')
-    names(color_list)=c('Prediction','Observed values')
-    
-    print(
-      ggplotly(
-        ggplot()+
-          geom_point(aes(x=c(1:t)+t_last,y=pred,color='Prediction',fill='Prediction'))+
-          geom_ribbon(aes(x=c(1:t)+t_last,ymin=icl.pred,ymax=icu.pred,fill=paste0('Prediction I.C. (',(100*IC_prob) %>% round(),'%)'),color=paste0('Prediction I.C. (',(100*IC_prob) %>% round(),'%)')),alpha=0.25)+
-          geom_point(aes(x=c(1:t_last),y=model$data_out,color='Observed values',fill='Observed values'))+
-          scale_fill_manual('',na.value=NA,values=fill_list)+
-          scale_color_manual('',na.value=NA,values=color_list)+
-          theme_bw()
-      )
-    )
-  }
-  
-  return(list('pred'=pred,'var.pred'=var.pred,'icl.pred'=icl.pred,'icu.pred'=icu.pred,'at'=at,'Rt'=Rt))
-}
 eval_past=function(model,smooth=FALSE,t_offset=0){
   if(smooth & t_offset>0){
     t_offset=0
@@ -778,60 +625,59 @@ plot_lat_var=function(model,var,smooth=TRUE,cut_off=10,dinamic=TRUE,exp_y=FALSE)
 }
 
 
-# ### Exemplos ####
-# 
-# ### Importando dados ####
-# 
-# 
-# dados=read.csv('varicela\\data\\varicela internacoes.csv')[,c(1,7:162)]
-# dados[1:2,1]='00 a 04 anos'
-# dados[5:8,1]='15 a 49 anos'
-# dados[9:12,1]='50 anos e mais'
-# dados=aggregate(.~FaixaEtaria,dados,sum)[,-1]
-# 
-# pre_exp=read.csv2('varicela\\data\\populacao 2000-2020.csv')[-12,c(1,10:22)]
-# pre_exp[4:7,1]='15 a 49 anos'
-# pre_exp[8:11,1]='50 anos e mais'
-# pre_exp=aggregate(.~FaixaEtaria,pre_exp,sum)[,-1]
-# 
-# dummy=matrix(0,dim(pre_exp)[1],0)
-# nomes=c()
-# for(ano in c(2008:2020)){
-#   for(mes in c(1:12)){
-#     nomes=c(nomes,paste0('X',ano,'.',mes))
-#     dummy=cbind(dummy,pre_exp[,ano-2007])
-#   }
-# }
-# pre_exp=dummy
-# 
-# idade_indice=1
-# inter=as.numeric(dados[idade_indice,])
-# exp=as.data.frame(pre_exp)[idade_indice,]
-# names(exp)=nomes
-# exp=as.numeric(exp)
-# 
-# N <- dim(dados)[2]
-# indice_inter=69
-# data_lab=names(dados)
-# 
-# indic_inter=c(rep(0,indice_inter-1),rep(1,N-indice_inter+1))
-# covid=c(rep(0,146),rep(1,N-146))
-# var_covid=ifelse(is.na(covid),0,covid)
-# 
-# ### Criando modelo ####
-# 
-# nivel_bloc=gera_bloco_poly(2,D=1/0.9,name='Nível')
-# inter_bloc=gera_bloco_poly(1,value=indic_inter,D=1/1,name='Vacina')
-# covid_bloc=gera_bloco_poly(1,value=var_covid,D=1/1,name='Covid')
-# sazo_bloc=gera_bloco_sazo(12,D=1/0.98,name='Sazonalidade')
-# 
-# estrutura=concat_bloco(nivel_bloc,inter_bloc,covid_bloc,sazo_bloc)
-# 
-# teste <- ajusta_modelo(estrutura,data_out=inter,offset=exp)
-# 
-# plot_lat_var(teste,'Vacina',smooth = T,exp_y=TRUE)
-# 
-# predicao=predict(teste,t=10,offset=exp[N],log_offset=NULL,FF=NULL,D=NULL,W=NULL,plot=T)
+### Exemplos ####
+
+### Importando dados ####
+
+
+dados=read.csv('varicela\\data\\varicela internacoes.csv')[,c(1,7:162)]
+dados[1:2,1]='00 a 04 anos'
+dados[5:8,1]='15 a 49 anos'
+dados[9:12,1]='50 anos e mais'
+dados=aggregate(.~FaixaEtaria,dados,sum)[,-1]
+
+pre_exp=read.csv2('varicela\\data\\populacao 2000-2020.csv')[-12,c(1,10:22)]
+pre_exp[4:7,1]='15 a 49 anos'
+pre_exp[8:11,1]='50 anos e mais'
+pre_exp=aggregate(.~FaixaEtaria,pre_exp,sum)[,-1]
+
+dummy=matrix(0,dim(pre_exp)[1],0)
+nomes=c()
+for(ano in c(2008:2020)){
+  for(mes in c(1:12)){
+    nomes=c(nomes,paste0('X',ano,'.',mes))
+    dummy=cbind(dummy,pre_exp[,ano-2007])
+  }
+}
+pre_exp=dummy
+
+idade_indice=1
+inter=as.numeric(dados[idade_indice,])
+exp=as.data.frame(pre_exp)[idade_indice,]
+names(exp)=nomes
+exp=as.numeric(exp)
+
+N <- dim(dados)[2]
+indice_inter=69
+data_lab=names(dados)
+
+indic_inter=c(rep(0,indice_inter-1),rep(1,N-indice_inter+1))
+covid=c(rep(0,146),rep(1,N-146))
+var_covid=ifelse(is.na(covid),0,covid)
+
+### Criando modelo ####
+
+nivel_bloc=gera_bloco_poly(2,D=1/0.9,name='Nível')
+inter_bloc=gera_bloco_poly(1,value=indic_inter,D=1/1,name='Vacina')
+covid_bloc=gera_bloco_poly(1,value=var_covid,D=1/1,name='Covid')
+sazo_bloc=gera_bloco_sazo(12,D=1/0.98,name='Sazonalidade')
+
+estrutura=concat_bloco(nivel_bloc,inter_bloc,covid_bloc,sazo_bloc)
+
+teste <- ajusta_modelo(estrutura,data_out=inter,offset=exp)
+
+plot_lat_var(teste,'Vacina',smooth = T,exp_y=TRUE)
+show_fit(teste,smooth=FALSE,t_offset=1)$plot
 
 # # exp=rpois(100,10)+2
 # # y=rpois(100,10*exp*c(rep(1,50),rep(2,50)))
